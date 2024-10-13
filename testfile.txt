@@ -1,4 +1,29 @@
 home is $HOME
+/home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment1/Test_hello.c:6:test_hello:INFO: Hello!  Your unity setup is working!
+/home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment1/Test_hello.c:4:test_hello:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+/home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment1/Test_assignment_validate.c:9:test_assignment_validate:PASS
+
+-----------------------
+1 Tests 0 Failures 0 Ignored 
+OK
+Running tests at /home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment3/Test_systemcalls.c : function test_systemcalls
+Remove trailing newline
+Read this is a test from testfile.txt
+system() echo this is a test returned this is a test
+Remove trailing newline
+Read home is /home/dani from testfile.txt
+system() echo home is $HOME returned: home is /home/dani
+/home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment3/Test_systemcalls.c:28:test_systemcalls:PASS
+Running tests at /home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment3/Test_systemcalls.c : function test_exec_calls
+/home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment3/Test_systemcalls.c:58:test_exec_calls:PASS
+Running tests at /home/dani/projects/assignment-1-damarre89/assignment-autotest/test/assignment3/Test_systemcalls.c : function test_exec_redirect_calls
+Remove trailing newline
+Read home is /home/dani from testfile.txt
+execv /bin/sh -c echo home is $HOME returned home is /home/dani
 Remove trailing newline
 Read home is $HOME from testfile.txt
 execv /bin/echo home is $HOME returned home is $HOME
