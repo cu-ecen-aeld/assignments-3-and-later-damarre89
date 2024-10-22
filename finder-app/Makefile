@@ -1,8 +1,12 @@
-TARGET=writer
+ifndef CROSS_COMPILE
+override CROSS_COMPILE=
+endif
+CFLAGS = -g -Wall  
 
-build:
-	$(CROSS_COMPILE)gcc -g -Wall -c *.c -o $(TARGET).o
-	$(CROSS_COMPILE)gcc -g -Wall $(TARGET).o -o $(TARGET)
+write:
+	$(CROSS_COMPILE)gcc $(CFLAGS) -o writer writer.c
 
 clean:
-	rm -rf *.o *.elf $(TARGET) *.map
+	rm -f writer
+
+all: write
