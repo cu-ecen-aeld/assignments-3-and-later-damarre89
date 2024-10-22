@@ -1,12 +1,12 @@
-ifndef CROSS_COMPILE
-override CROSS_COMPILE=
-endif
-CFLAGS = -g -Wall  
+CC := $(CROSS_COMPILE)gcc
+SRC := writer.c
+TARGET = writer
+OBJS := $(SRC:.c=.o)
 
-write:
-	$(CROSS_COMPILE)gcc $(CFLAGS) -o writer writer.c
+all: $(TARGET)
+
+$(TARGET) : $(OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 clean:
-	rm -f writer
-
-all: write
+	-rm -f *.o $(TARGET) *.elf *.map
