@@ -17,3 +17,4 @@ aesdsocket: aesdsocket.c
 
 clean:
 	rm -f aesdsocket *.o
+	rm -f valgrind-out.txt
