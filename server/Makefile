@@ -1,20 +1,23 @@
-ifeq ($(CC),)
-	CC = ${CROSS_COMPILE}gcc
+CC ?= gcc
+CFLAGS ?= -Wall -Wextra -DUSE_AESD_CHAR_DEVICE
+LDFLAGS ?= -lpthread
+TARGET ?= aesdsocket
+OBJFILES = aesdsocket.o
+
+ifdef CROSS_COMPILE
+    CC ?= $(CROSS_COMPILE)gcc
 endif
 
-ifeq ($(CFLAGS),)
-	CFLAGS = -g -Wall -Werror 
-endif
+.PHONY: all clean default
 
-ifeq ($(LDFLAGS),)
-	LDFLAGS = -pthread -lrt
-endif
+default: $(TARGET)
+all: $(TARGET)
 
-all: aesdsocket
+$(TARGET): $(OBJFILES)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-aesdsocket: aesdsocket.c
-	$(CC) $^ -o $@ $(INCLUDES) $(LDFLAGS) $(CFLAGS)
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)
 
 clean:
-	rm -f aesdsocket *.o
-	rm -f valgrind-out.txt
+	rm -f $(TARGET) $(OBJFILES)
