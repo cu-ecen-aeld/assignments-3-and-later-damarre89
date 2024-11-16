@@ -27,11 +27,11 @@
 
 struct aesd_dev
 {
-     struct aesd_circular_buffer circular_buffer;    // aesd circular buffer
-     char *temp_buffer;                              // unterminated command buffer
-     size_t temp_buffer_size;                        // untermindate size
-     struct mutex lock;                              // Mutex lock
-     struct cdev cdev;                               // Char device structure
+     struct aesd_circular_buffer aesd_cb;    // aesd circular buffer
+     char *tmp_buf;                          // unterminated command buffer
+     size_t tmp_size;                        // untermindate size
+     struct mutex mx_lock;                   // Mutex lock
+     struct cdev cdev;                       // Char device structure
 };
 
 
