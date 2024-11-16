@@ -1,23 +1,16 @@
-CC ?= gcc
-CFLAGS ?= -Wall -Wextra -DUSE_AESD_CHAR_DEVICE
-LDFLAGS ?= -lpthread
+# If variables aren't define, define them
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS ?= -g -Wall -Werror
+LDFLAGS ?= -lpthread -lrt
+
+# Project specific flags
 TARGET ?= aesdsocket
-OBJFILES = aesdsocket.o
+SOURCES = aesdsocket.c
+INCLUDES = -I.
+EXTRA_CFLAGS = -DUSE_AESD_CHAR_DEVICE=1
 
-ifdef CROSS_COMPILE
-    CC ?= $(CROSS_COMPILE)gcc
-endif
-
-.PHONY: all clean default
-
-default: $(TARGET)
-all: $(TARGET)
-
-$(TARGET): $(OBJFILES)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $< $(LDFLAGS)
+all:
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) $(INCLUDES) ${SOURCES} -o $(TARGET) $(LDFLAGS)
 
 clean:
-	rm -f $(TARGET) $(OBJFILES)
+	rm -f $(PROGRAM_NAME) *.o

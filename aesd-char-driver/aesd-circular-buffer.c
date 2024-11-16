@@ -17,6 +17,21 @@
 #include "aesd-circular-buffer.h"
 
 /**
+ * @param buffer the buffer to check if current in_off is at end of entry array
+ * @param offs_idx an index in the buffer entry list
+ * @return true if entry is the last entry in the entry array, false if not
+ */
+static bool end_entry(struct aesd_circular_buffer *buffer, uint8_t offs_idx)
+{
+    int buffer_size = (sizeof(buffer->entry)) / sizeof(struct aesd_buffer_entry);
+    
+    if (offs_idx == (buffer_size - 1)) {
+        return true;
+    }
+    return false;
+}
+
+/**
  * @param buffer the buffer to search for corresponding offset.  Any necessary locking must be performed by caller.
  * @param char_offset the position to search for in the buffer list, describing the zero referenced
  *      character index if all buffer strings were concatenated end to end
@@ -29,42 +44,71 @@
 struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct aesd_circular_buffer *buffer,
             size_t char_offset, size_t *entry_offset_byte_rtn )
 {
-    size_t total_chars = 0;
-    size_t start_entry = buffer->out_offs;
+    size_t cur_offset = 0;
+    size_t cur_entry_offset = 0;
+    size_t entry_idx = 0;
+    struct aesd_buffer_entry* p_entry = NULL;
 
-    // Loop through the entries starting from buffer->out_offs
-    size_t i = 0;
-    for (i = start_entry; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED + start_entry; ++i)
-    {
-        // Calculate the index taking into account wrapping around to the beginning
-        size_t index = i % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    // If buffer is NULL, return NULL
+    if (buffer == NULL) {
+        return NULL;
+    }
 
-        // Check if the entry at this index is empty
-        if (buffer->entry[index].buffptr == NULL)
-        {
-            // If we've searched all entries, exit the loop
-            if (i == start_entry + AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED - 1)
-            {
-                break;
+    entry_idx = buffer->out_offs;
+    p_entry = &(buffer->entry[entry_idx]);
+
+    // Ensure first entry isn't a null pointer
+    if (p_entry == NULL) {
+        return NULL;
+    }
+
+    // Walk through buffer until offset is reached
+    while (cur_offset < char_offset) {
+       
+        if (p_entry->size == 0 || (p_entry->buffptr == NULL)) {
+            // If size of entry is zero or buffer pointer is NULL, return NULL
+            return NULL;
+        } else if (cur_entry_offset == (p_entry->size - 1)) {
+            // If we are at the end of the current entry, go to next entry or 
+            // if we have wrapped all the way back around return NULL
+            if (end_entry(buffer, entry_idx)) {
+                // Wrap back to beginning entry
+                entry_idx = 0;
+            } else {
+                entry_idx++;
             }
-            continue;
+
+            p_entry = &(buffer->entry[entry_idx]);
+
+            // Ensure first entry isn't a null pointer
+            if (p_entry == NULL) {
+                return NULL;
+            }
+
+            // If we are back to the beginning, return NULL, end of buffer
+            if (entry_idx == buffer->out_offs) {
+                return NULL;
+            }
+            
+            // Reset current entry offset for next entry buffer
+            cur_entry_offset = 0;
+        } else {
+            // Not at end of entry yet, increment offset
+            cur_entry_offset++;
         }
 
-        // Calculate the total chars including the current entry
-        total_chars += buffer->entry[index].size;
+        cur_offset++;
+    }
 
-        // Check if the char_offset is within this entry
-        if (char_offset < total_chars)
-        {
-            // Calculate the byte offset within the entry
-            *entry_offset_byte_rtn = char_offset - (total_chars - buffer->entry[index].size);
-
-            // Return a pointer to the corresponding entry structure
-            return &buffer->entry[index];
+    // Successfully found entry
+    if (cur_offset == char_offset) {
+        // Verify entry isn't empty
+        if ((p_entry->size != 0) && (p_entry->buffptr != NULL)) {
+            *entry_offset_byte_rtn = cur_entry_offset;
+            return p_entry;
         }
     }
 
-    // If char_offset is not found in any entry, return NULL
     return NULL;
 }
 
@@ -75,33 +119,33 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 * Any necessary locking must be handled by the caller
 * Any memory referenced in @param add_entry must be allocated by and/or must have a lifetime managed by the caller.
 */
-const char * aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
+void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const struct aesd_buffer_entry *add_entry)
 {
-    const char * ret_val = NULL;
-    // If the buffer is full, overwrite the oldest entry and advance buffer->out_offs
-    if (buffer->full)
-    {
-        // Mark the oldest entry as unused and return pointer to be freed
-        ret_val = buffer->entry[buffer->out_offs].buffptr;
-        buffer->entry[buffer->out_offs].buffptr = NULL;
-        buffer->entry[buffer->out_offs].size = 0;
-        // Advance out_offs to the next index
-        buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    // No matter what we will write to current input offset
+    buffer->entry[buffer->in_offs] = *add_entry;
+
+    // Move input offset to next pointer, check if at end of entry array
+    if (end_entry(buffer, buffer->in_offs)) {
+        buffer->in_offs = 0;
+    } else {
+        buffer->in_offs++;
     }
 
-    // Copy data from the new entry to the current input position and advance in_offs
-    buffer->entry[buffer->in_offs].buffptr = add_entry->buffptr;
-    buffer->entry[buffer->in_offs].size = add_entry->size;
-    // Advance in_offs to the next index
-    buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
-
-    // Mark the buffer as full if in_offs reaches out_offs
-    if (buffer->in_offs == buffer->out_offs)
-    {
-        buffer->full = true;
+    if (buffer->full) {
+        // If buffer was already full, make sure output offset moves with input
+        // offset
+        buffer->out_offs = buffer->in_offs;
+    } else {
+        // Check to see if buffer is now full for the first time
+        if (buffer->in_offs == buffer->out_offs) {
+            buffer->full = true;
+        } else {
+            // Buffer shouldn't be full, make sure flag isn't set to true
+            buffer->full = false;
+        }
     }
 
-    return ret_val;
+    return;
 }
 
 /**
